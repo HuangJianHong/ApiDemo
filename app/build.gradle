@@ -20,8 +20,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            debuggable true
+            buildConfigField "boolean", "DEBUG", "true"
+        }
         release {
             minifyEnabled false
+            debuggable false
+            buildConfigField "boolean", "DEBUG", "false"
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -34,6 +40,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
 }
 
