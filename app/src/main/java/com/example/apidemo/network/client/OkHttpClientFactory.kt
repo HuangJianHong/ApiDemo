@@ -1,8 +1,9 @@
 package com.example.apidemo.network.client
 
 import android.content.Context
+import com.example.apidemo.BuildConfig
 import com.example.apidemo.network.NetworkConfig
-import com.example.apidemo.network.interceptor.CacheInterceptor
+import com.example.apidemo.network.cache.CacheManager
 import com.example.apidemo.network.interceptor.HeaderInterceptor
 import com.example.apidemo.network.interceptor.LoggingInterceptor
 import okhttp3.Cache
@@ -19,24 +20,29 @@ object OkHttpClientFactory {
     /**
      * 创建配置完整的 OkHttpClient 实例
      * @param context Android 上下文
+     * @param enableLogging 是否启用日志，默认根据 BuildConfig.DEBUG 决定
      * @return 配置完成的 OkHttpClient
      */
-    fun create(context: Context): OkHttpClient {
+    fun create(context: Context, enableLogging: Boolean = BuildConfig.DEBUG): OkHttpClient {
+        val cacheManager = CacheManager.getInstance(context)
+        
         return OkHttpClient.Builder().apply {
             // 超时配置
             connectTimeout(NetworkConfig.CONNECT_TIMEOUT, TimeUnit.SECONDS)
             readTimeout(NetworkConfig.READ_TIMEOUT, TimeUnit.SECONDS)
             writeTimeout(NetworkConfig.WRITE_TIMEOUT, TimeUnit.SECONDS)
             
-            // 缓存配置
+            // HTTP 缓存配置（用于网络缓存）
             cache(createCache(context))
             
             // 添加拦截器（注意顺序很重要）
             addInterceptor(HeaderInterceptor()) // 请求头拦截器
-            addInterceptor(CacheInterceptor(context)) // 缓存拦截器
+            addInterceptor(cacheManager.getSmartCacheInterceptor()) // 智能缓存拦截器（内存缓存 + 防重复请求）
             
             // 网络拦截器（用于网络层面的处理）
-            addNetworkInterceptor(LoggingInterceptor.create()) // 日志拦截器
+            if (enableLogging) {
+                addNetworkInterceptor(LoggingInterceptor.create()) // 日志拦截器
+            }
             
             // 连接池配置
             connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))

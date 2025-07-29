@@ -52,7 +52,7 @@ app/src/main/java/com/example/apidemo/
 ### 2. 拦截器系统
 - **LoggingInterceptor**: 网络请求日志记录
 - **HeaderInterceptor**: 自动添加通用请求头
-- **CacheInterceptor**: 智能缓存策略
+- **SmartCacheInterceptor**: 智能缓存策略（内存缓存 + 防重复请求）
 
 ### 3. 网络结果封装 (`NetworkResult`)
 ```kotlin
@@ -170,6 +170,56 @@ DELETE /posts/{id}      # 删除文章
 // 评论相关
 GET    /comments         # 获取所有评论
 GET    /posts/{id}/comments # 获取文章评论
+```
+
+## 🗄️ 智能缓存机制
+
+### 缓存策略
+
+**内存缓存 (10秒)**
+- 缓存最近 10 秒的 GET 请求成功响应
+- 优先从内存缓存读取，大幅提升响应速度
+- 网络异常时可回退到过期缓存
+
+**防重复请求 (1秒)**
+- 1秒内相同参数的请求会被自动拦截
+- 显示 Toast 提示"请求过于频繁，请稍后再试"
+- 如有可用缓存则返回缓存数据，否则返回 429 错误
+
+### 缓存使用示例
+
+```kotlin
+// 获取缓存管理器
+val cacheManager = CacheManager.getInstance(context)
+
+// 清空所有缓存
+cacheManager.clearAllCache()
+
+// 获取缓存统计信息
+val stats = cacheManager.getCacheStats()
+println("内存缓存条目数: ${stats.memoryCacheSize}")
+println("防重复请求记录数: ${stats.recentRequestsSize}")
+
+// 演示内存缓存
+// 第一次请求从网络获取，第二次请求从缓存获取
+val result1 = repository.getUsers() // 网络请求
+delay(1100) // 等待超过防重复请求阈值
+val result2 = repository.getUsers() // 缓存返回（速度更快）
+
+// 演示防重复请求
+val result1 = repository.getPosts() // 正常请求
+val result2 = repository.getPosts() // 立即请求会被拦截并显示 Toast
+```
+
+### 缓存配置
+
+可以通过修改 `SmartCacheInterceptor` 中的常量来调整缓存策略：
+
+```kotlin
+companion object {
+    private const val MEMORY_CACHE_DURATION = 10 * 1000L // 内存缓存时间（毫秒）
+    private const val DUPLICATE_REQUEST_THRESHOLD = 1 * 1000L // 防重复请求阈值（毫秒）
+}
 ```
 
 ## 🛠️ 扩展指南
