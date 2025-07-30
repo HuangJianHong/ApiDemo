@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    网络安全配置
+    确保应用安全地连接到HTTPS API
+-->
+<network-security-config>
+    <!-- 基础配置：禁止明文传输，强制使用HTTPS -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- 信任系统证书颁发机构 -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+
+    <!-- 调试配置：开发时可以放宽一些限制 -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+
+    <!-- 特定域名配置 -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- API域名 -->
+        <domain includeSubdomains="true">jsonplaceholder.typicode.com</domain>
+        <domain includeSubdomains="true">api.github.com</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </domain-config>
+
+    <!-- 开发环境：允许本地服务器连接 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </domain-config>
+</network-security-config> 

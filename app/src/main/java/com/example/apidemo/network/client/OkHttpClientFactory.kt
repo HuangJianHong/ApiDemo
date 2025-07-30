@@ -7,10 +7,13 @@ import com.example.apidemo.network.cache.CacheManager
 import com.example.apidemo.network.interceptor.HeaderInterceptor
 import com.example.apidemo.network.interceptor.LoggingInterceptor
 import com.example.apidemo.network.interceptor.RetryInterceptor
+import com.example.apidemo.network.interceptor.SecurityInterceptor
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.File
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.*
 
 /**
  * OkHttp 客户端工厂
@@ -37,6 +40,7 @@ object OkHttpClientFactory {
             cache(createCache(context))
             
             // 添加拦截器（注意顺序很重要）
+            addInterceptor(SecurityInterceptor()) // 安全拦截器（首先确保HTTPS）
             addInterceptor(HeaderInterceptor()) // 请求头拦截器
             addInterceptor(RetryInterceptor()) // 重试拦截器（在缓存之前，确保重试逻辑优先）
             addInterceptor(cacheManager.getSmartCacheInterceptor()) // 智能缓存拦截器（内存缓存 + 防重复请求）
@@ -52,10 +56,56 @@ object OkHttpClientFactory {
             // 重试配置
             retryOnConnectionFailure(true)
             
-            // SSL 配置（生产环境需要更严格的配置）
-            // 可以在这里添加 SSL 证书验证相关配置
+            // SSL/TLS 安全配置
+            configureSSLSecurity(this)
+            
+            // 协议配置 - 优先使用 HTTP/2，回退到 HTTP/1.1
+            protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
             
         }.build()
+    }
+    
+    /**
+     * 配置 SSL/TLS 安全设置
+     * @param builder OkHttpClient.Builder
+     */
+    private fun configureSSLSecurity(builder: OkHttpClient.Builder) {
+        try {
+            // 创建信任系统证书的 TrustManager
+            val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+            trustManagerFactory.init(null as java.security.KeyStore?)
+            
+            val trustManagers = trustManagerFactory.trustManagers
+            if (trustManagers.size == 1 && trustManagers[0] is X509TrustManager) {
+                val trustManager = trustManagers[0] as X509TrustManager
+                
+                // 配置 SSL 上下文，使用 TLS 1.2 和 1.3
+                val sslContext = SSLContext.getInstance("TLS")
+                sslContext.init(null, trustManagers, null)
+                
+                builder.sslSocketFactory(sslContext.socketFactory, trustManager)
+            }
+            
+            // 配置连接规格，强制使用安全的 TLS 版本
+            val connectionSpecs = listOf(
+                okhttp3.ConnectionSpec.Builder(okhttp3.ConnectionSpec.MODERN_TLS)
+                    .tlsVersions(okhttp3.TlsVersion.TLS_1_3, okhttp3.TlsVersion.TLS_1_2)
+                    .build(),
+                okhttp3.ConnectionSpec.Builder(okhttp3.ConnectionSpec.COMPATIBLE_TLS)
+                    .tlsVersions(okhttp3.TlsVersion.TLS_1_2)
+                    .build()
+            )
+            builder.connectionSpecs(connectionSpecs)
+            
+            // 强制主机名验证 - 使用默认的主机名验证器
+            // 注意：不使用内部API，而是使用标准验证器
+            
+        } catch (e: Exception) {
+            // 记录错误但不影响基本功能
+            if (BuildConfig.DEBUG) {
+                e.printStackTrace()
+            }
+        }
     }
     
     /**

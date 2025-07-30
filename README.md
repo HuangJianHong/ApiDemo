@@ -42,6 +42,7 @@ app/src/main/java/com/example/apidemo/
 - **Kotlinx Serialization 1.7.3** - JSON 序列化
 - **Kotlin Coroutines** - 异步编程
 - **Android Jetpack Compose** - 现代 UI 工具包
+- **SSL/TLS 安全配置** - 确保 HTTPS 连接安全
 
 ## 📦 核心功能
 
@@ -51,6 +52,7 @@ app/src/main/java/com/example/apidemo/
 - 定义通用请求头常量
 
 ### 2. 拦截器系统
+- **SecurityInterceptor**: 强制 HTTPS 连接和安全验证
 - **LoggingInterceptor**: 网络请求日志记录
 - **HeaderInterceptor**: 自动添加通用请求头
 - **RetryInterceptor**: 网络重试机制（丢包/超时时1秒后重试1次）
@@ -65,7 +67,14 @@ sealed class NetworkResult<out T> {
 }
 ```
 
-### 4. 安全 API 调用
+### 4. SSL/TLS 安全配置
+- **网络安全配置**: 禁止明文传输，强制 HTTPS
+- **证书验证**: 完整的 SSL/TLS 证书链验证
+- **TLS 版本**: 支持 TLS 1.2 和 TLS 1.3
+- **主机名验证**: 防止中间人攻击
+- **安全拦截器**: 运行时强制 HTTPS 连接
+
+### 5. 安全 API 调用
 ```kotlin
 suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): NetworkResult<T>
 ```
@@ -309,12 +318,35 @@ if (token.isNotEmpty()) {
 - 网络层与 UI 层解耦
 - 使用 `NetworkResult` 便于测试不同状态
 
+## 🔒 SSL 安全特性
+
+本项目已配置完整的 SSL/TLS 安全功能：
+
+### 安全配置
+- ✅ **强制 HTTPS**: 禁止所有 HTTP 明文连接
+- ✅ **证书验证**: 完整的 SSL 证书链验证
+- ✅ **TLS 支持**: TLS 1.2 和 TLS 1.3 协议支持
+- ✅ **主机名验证**: 防止域名欺骗攻击
+- ✅ **安全拦截**: 运行时强制安全连接检查
+
+### 使用示例
+```kotlin
+// SSL 配置会自动应用到所有 API 调用
+val result = repository.getUsers() // 自动使用 HTTPS 安全连接
+
+// 验证 SSL 配置
+val sslExample = SSLUsageExample(context)
+sslExample.checkSSLConfiguration()
+sslExample.demonstrateSecureApiCall()
+```
+
 ## 📚 相关文档
 
 - [Retrofit 官方文档](https://square.github.io/retrofit/)
 - [OkHttp 官方文档](https://square.github.io/okhttp/)
 - [Kotlinx Serialization 官方文档](https://github.com/Kotlin/kotlinx.serialization)
 - [Android 网络安全配置](https://developer.android.com/training/articles/security-config)
+- [TLS 最佳实践](https://developer.android.com/training/articles/security-ssl)
 
 ---
 
