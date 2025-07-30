@@ -6,6 +6,7 @@ import com.example.apidemo.network.NetworkConfig
 import com.example.apidemo.network.cache.CacheManager
 import com.example.apidemo.network.interceptor.HeaderInterceptor
 import com.example.apidemo.network.interceptor.LoggingInterceptor
+import com.example.apidemo.network.interceptor.RetryInterceptor
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.File
@@ -37,6 +38,7 @@ object OkHttpClientFactory {
             
             // 添加拦截器（注意顺序很重要）
             addInterceptor(HeaderInterceptor()) // 请求头拦截器
+            addInterceptor(RetryInterceptor()) // 重试拦截器（在缓存之前，确保重试逻辑优先）
             addInterceptor(cacheManager.getSmartCacheInterceptor()) // 智能缓存拦截器（内存缓存 + 防重复请求）
             
             // 网络拦截器（用于网络层面的处理）

@@ -18,6 +18,7 @@ app/src/main/java/com/example/apidemo/
 │   ├── interceptor/
 │   │   ├── LoggingInterceptor.kt       # 日志拦截器
 │   │   ├── HeaderInterceptor.kt        # 请求头拦截器
+│   │   ├── RetryInterceptor.kt         # 网络重试拦截器
 │   │   └── CacheInterceptor.kt         # 缓存拦截器
 │   ├── model/
 │   │   ├── User.kt                     # 用户数据模型
@@ -52,6 +53,7 @@ app/src/main/java/com/example/apidemo/
 ### 2. 拦截器系统
 - **LoggingInterceptor**: 网络请求日志记录
 - **HeaderInterceptor**: 自动添加通用请求头
+- **RetryInterceptor**: 网络重试机制（丢包/超时时1秒后重试1次）
 - **SmartCacheInterceptor**: 智能缓存策略（内存缓存 + 防重复请求）
 
 ### 3. 网络结果封装 (`NetworkResult`)
@@ -170,6 +172,46 @@ DELETE /posts/{id}      # 删除文章
 // 评论相关
 GET    /comments         # 获取所有评论
 GET    /posts/{id}/comments # 获取文章评论
+```
+
+## 🔄 网络重试机制
+
+### 重试策略
+
+**自动重试 (1秒延迟)**
+- 检测到网络丢包、超时等异常时自动重试1次
+- 延迟1秒后进行重试，避免频繁请求
+- 支持递增延迟策略（第2次重试延迟2秒）
+
+**支持重试的场景**
+- 网络超时 (SocketTimeoutException)
+- DNS解析失败 (UnknownHostException)
+- 连接重置/拒绝 (Connection reset/refused)
+- 网络不可达 (Network unreachable)
+- HTTP错误状态码：408, 502, 503, 504
+
+### 重试使用示例
+
+```kotlin
+// 重试机制会自动工作，无需额外代码
+val result = repository.getUsers()
+// 如果第一次请求失败（网络丢包等），会自动延迟1秒后重试1次
+
+// 观察重试行为（通过日志）
+// RetryInterceptor: 网络异常，准备重试: https://api.example.com/users
+// RetryInterceptor: 延迟 1000ms 后重试...
+// RetryInterceptor: 请求重试成功: https://api.example.com/users (重试次数: 1)
+```
+
+### 重试配置
+
+可以通过修改 `RetryInterceptor` 中的常量来调整重试策略：
+
+```kotlin
+companion object {
+    private const val MAX_RETRY_COUNT = 1        // 最大重试次数
+    private const val RETRY_DELAY_MS = 1000L     // 重试延迟（毫秒）
+}
 ```
 
 ## 🗄️ 智能缓存机制

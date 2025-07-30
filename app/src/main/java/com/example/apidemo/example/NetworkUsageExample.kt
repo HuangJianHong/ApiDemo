@@ -200,6 +200,49 @@ object NetworkUsageExample {
             Log.e(TAG, "批量操作失败", e)
         }
     }
+    
+    /**
+     * 示例5：网络重试测试
+     * 演示如何观察和测试网络重试机制
+     */
+    suspend fun networkRetryExample(context: Context) {
+        val repository = ApiRepository.getInstance(context)
+        
+        Log.i(TAG, "=== 开始测试网络重试功能 ===")
+        Log.i(TAG, "请查看 'RetryInterceptor' 标签的日志以观察重试行为")
+        
+        try {
+            // 发送多个请求来增加触发重试的可能性
+            repeat(3) { index ->
+                Log.i(TAG, "发送第 ${index + 1} 个测试请求...")
+                
+                repository.getUsers()
+                    .onSuccess { users ->
+                        Log.i(TAG, "✅ 第 ${index + 1} 个请求成功，获取到 ${users.size} 个用户")
+                    }
+                    .onError { code, message ->
+                        Log.w(TAG, "❌ 第 ${index + 1} 个请求失败: $message (错误码: $code)")
+                        Log.i(TAG, "注意查看是否有重试日志输出")
+                    }
+                
+                // 间隔一小段时间再发送下一个请求
+                kotlinx.coroutines.delay(500)
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "重试测试过程中发生异常", e)
+        }
+        
+        Log.i(TAG, "=== 网络重试功能测试结束 ===")
+        Log.i(TAG, """
+            重试机制说明:
+            • 自动检测网络丢包、超时等异常
+            • 延迟1秒后自动重试1次
+            • 支持的异常: SocketTimeoutException, UnknownHostException等
+            • 支持的HTTP状态码: 408, 502, 503, 504
+            • 查看日志标签 'RetryInterceptor' 了解重试详情
+        """.trimIndent())
+    }
 }
 
 /**
