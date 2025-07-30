@@ -77,7 +77,7 @@ fun ApiDemoScreen(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            Text("获取文章数据")
+            Text("获取文章数据")    //需要科学上网，才可以正常访问api
         }
         
         // 结果显示区域
